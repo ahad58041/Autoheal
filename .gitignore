@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+bin/
+
+# Logs
+*.log
+autoheal.log
+
+# Dashboard (also ignored locally by dashboard/.gitignore)
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+
+# Editor / OS junk
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
