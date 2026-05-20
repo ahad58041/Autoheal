@@ -278,10 +278,10 @@ autoheal/
 
 | Member | Role / Modules | Notes |
 |---|---|---|
-| Sumaica Rehman | _TBD_ | |
-| Syed Ali Zaidi | _TBD_ | |
-| Abdul Mateen   | _TBD_ | |
-| Abdul Ahad     | _TBD_ | |
+| Sumaica Rehman | Observer — `/proc` parser, CPU% calculation, SnapshotBuffer | |
+| Syed Ali Zaidi | Engine — daemonization, thread lifecycle, shutdown, ignore list | |
+| Abdul Mateen   | Brain + Healer — detection rules, moving window, signal ladder | |
+| Abdul Ahad     | Interface + Dashboard — WebSocket server, JSON, Next.js UI | |
 
 > Even though one person is building this, the **report and slides must attribute clear ownership** for the OS-course rubric. Suggested mapping when the time comes:
 > - **Observer + /proc parsing** → person comfortable with low-level file I/O
