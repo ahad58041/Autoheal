@@ -62,7 +62,6 @@ void Brain::evaluate_() {
     for (const auto& p : prev.processes) prev_index[p.pid] = &p;
 
     static const long ticks_per_sec = sysconf(_SC_CLK_TCK);
-    static const long ncpus         = sysconf(_SC_NPROCESSORS_ONLN);
 
     auto dt_sec = std::chrono::duration<double>(latest.sampled_at - prev.sampled_at).count();
     if (dt_sec <= 0.0) dt_sec = 1.0;
@@ -81,7 +80,6 @@ void Brain::evaluate_() {
             if (curr_total >= prev_total) {
                 double dticks = static_cast<double>(curr_total - prev_total);
                 cpu_pct = (dticks / static_cast<double>(ticks_per_sec)) / dt_sec * 100.0;
-                if (ncpus > 0) cpu_pct /= static_cast<double>(ncpus);
             }
         }
 

@@ -47,7 +47,6 @@ std::string JsonSerializer::build(const SnapshotBuffer& buffer,
     {
         std::lock_guard<std::mutex> lk(buffer.mu);
         static const long ticks_per_sec = sysconf(_SC_CLK_TCK);
-        static const long ncpus         = sysconf(_SC_NPROCESSORS_ONLN);
 
         const ProcessTable* latest = &buffer.latest;
         const ProcessTable* prev   = nullptr;
@@ -74,7 +73,6 @@ std::string JsonSerializer::build(const SnapshotBuffer& buffer,
                 if (a >= b) {
                     double dticks = static_cast<double>(a - b);
                     cpu = (dticks / static_cast<double>(ticks_per_sec)) / dt_sec * 100.0;
-                    if (ncpus > 0) cpu /= static_cast<double>(ncpus);
                 }
             }
             procs.push_back({
