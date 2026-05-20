@@ -47,7 +47,7 @@ Modules live under `src/` with one folder per concern:
 
 ---
 
-## Build (inside the Ubuntu 22.04 VM)
+## Build (inside WSL2 Ubuntu)
 
 ```bash
 # 1. Install dependencies (one-time)
@@ -69,13 +69,13 @@ npm install
 cd ..
 ```
 
-> ⚠️ Do **not** keep the working repo under a VirtualBox shared folder (`/media/sf_*`). Copy or clone it into the VM's home directory (e.g. `~/autoheal`). File I/O on shared folders is slow and watching `/proc` from a host-mounted path is awkward.
+> ⚠️ Do **not** clone this repo under `/mnt/c/...`. Clone inside the WSL filesystem (e.g. `~/autoheal`). File I/O on `/mnt/c` is ~10× slower and watching `/proc` from a Windows-mounted path is awkward.
 
 ---
 
 ## Run the demo
 
-Open **three** terminals inside the Ubuntu VM.
+Open **three** terminals in WSL (just open "Ubuntu" from Start three times).
 
 **Terminal 1 — start the daemon in foreground mode:**
 ```bash

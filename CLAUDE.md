@@ -12,7 +12,7 @@
 
 | Area | Decision | Rationale |
 |---|---|---|
-| **Dev Environment** | **VirtualBox VM running Ubuntu 22.04** on a Windows 11 host | Full Linux syscalls, `/proc`, signals, pthreads in a fully isolated guest. Work inside `~/autoheal` in the VM's home directory, **not** under `/media/sf_*` shared folders (file I/O is slow and `/proc` watching is awkward there). |
+| **Dev Environment** | **WSL2 (Ubuntu 22.04) on Windows 11** | Full Linux syscalls, `/proc`, signals, pthreads — no VM overhead. Installed via a single `wsl --install` PowerShell command. Work inside the WSL home dir (`~/autoheal`), **not** under `/mnt/c/...` (file I/O is ~10× slower there and `/proc` watching is awkward). |
 | **Builder** | **Solo** | One person doing everything. Scope and phasing reflect this — no parallel tracks. |
 | **MVP Scope** | **Full proposal as written** (all 5 modules) | User-directed. Descope ladder in §7 ready if needed. |
 | **Detection Logic** | **Static thresholds + short moving window** | Predictable, demoable, easy to tune live. No statistics or ML overhead. |
@@ -86,44 +86,41 @@
 
 ---
 
-## 4. VirtualBox Ubuntu Setup — Do This Once
+## 4. WSL2 Setup — Do This Once
 
-Assumed prerequisite: VirtualBox is installed on Windows 11 and an **Ubuntu 22.04** guest is already created and booting.
+### 4a. Install WSL2 + Ubuntu
 
-### 4a. Get the project files into the VM
+Open **PowerShell as Administrator** on Windows 11 and run:
 
-Pick one of these (any works):
-
-**Option A — Git (recommended once you have a GitHub repo):**
-```bash
-# Inside the Ubuntu VM:
-cd ~
-git clone <your-repo-url> autoheal
-cd autoheal
+```powershell
+wsl --install -d Ubuntu-22.04
 ```
 
-**Option B — VirtualBox Shared Folder:**
-1. VM powered off: VirtualBox → **Settings → Shared Folders** → add `C:\Users\PMLS\Desktop\final labs\dsa final`, name it `autoheal`, check **Auto-mount** + **Make Permanent**.
-2. Boot Ubuntu, add yourself to the `vboxsf` group once, then log out and back in:
-   ```bash
-   sudo usermod -aG vboxsf $USER
-   ```
-3. Copy the files into the VM's home dir (do **not** work from `/media/sf_*`):
-   ```bash
-   cp -r /media/sf_autoheal ~/autoheal
-   cd ~/autoheal
-   ```
+That single command enables WSL, enables the Virtual Machine Platform feature, downloads the WSL2 kernel, installs Ubuntu, and sets WSL2 as default. **Reboot if prompted.**
 
-**Option C — Drag-and-drop** (requires Guest Additions installed).
+After reboot, "Ubuntu" appears in the Start menu. Launch it:
+- It finishes setup (1–2 min the first time)
+- Prompts for a Linux **username** (lowercase, e.g. `ahad`)
+- Prompts for a **password** (won't echo characters — normal)
 
-### 4b. Install dependencies (inside the Ubuntu VM)
+Verify it's WSL2, not WSL1, from PowerShell:
+```powershell
+wsl -l -v
+```
+You should see `VERSION 2` next to Ubuntu-22.04. If it says `1`:
+```powershell
+wsl --set-version Ubuntu-22.04 2
+```
+
+> If `wsl --install` fails with "virtualization not enabled", reboot into your BIOS/UEFI and turn on Intel VT-x (or AMD-V / SVM).
+
+### 4b. Install dependencies (inside the Ubuntu shell)
 
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y build-essential g++ make git \
                     libwebsocketpp-dev libboost-all-dev \
                     nlohmann-json3-dev \
-                    nodejs npm \
                     stress-ng htop wscat curl
 
 # Newer Node for Next.js 14:
@@ -133,20 +130,23 @@ node --version   # should print v20.x
 g++  --version   # should print 11.x or newer
 ```
 
-### 4c. (Optional) View the dashboard from the Windows host
+### 4c. Clone the project into the WSL home dir
 
-Easiest: just use **Firefox inside the Ubuntu VM** (`http://localhost:3000`). Done.
+```bash
+cd ~
+git clone https://github.com/ahad58041/Autoheal.git autoheal
+cd autoheal
+```
 
-If you'd rather browse from Windows, with the VM powered off go to **VirtualBox → Settings → Network → Adapter 1 → Advanced → Port Forwarding** and add:
+> ⚠️ **Do not** clone or work under `/mnt/c/...`. File I/O on the Windows-mounted path is ~10× slower and watching `/proc` from there is awkward. Always work inside `~/autoheal` in the WSL filesystem.
 
-| Name | Protocol | Host Port | Guest Port |
-|---|---|---|---|
-| dashboard | TCP | 3000 | 3000 |
-| ws        | TCP | 8080 | 8080 |
+### 4d. View the dashboard from the Windows host
 
-Then `http://localhost:3000` on the Windows host reaches the VM.
+No port forwarding needed — WSL2 auto-forwards `localhost`. After `npm run dev` in the dashboard, just open **any Windows browser** to `http://localhost:3000` and it reaches the WSL service directly.
 
-> ⚠️ **Do not** keep the working repo under `/media/sf_*` — file I/O over shared folders is slow and watching `/proc` from a host-mounted path is awkward. Always copy into `~/autoheal` inside the guest.
+### 4e. Recommended editor flow
+
+From inside WSL, run `code .` in your project directory — Windows VSCode opens, automatically installs the WSL remote extension, and edits the WSL files natively. Claude Code works the same way.
 
 ---
 
@@ -155,9 +155,9 @@ Then `http://localhost:3000` on the Windows host reaches the VM.
 > Solo realistic budget: **2 focused days** for a working MVP, **3–4 days** for the polished full proposal with report + slides. The hour estimates below assume one person, head-down, no parallelism.
 
 ### Phase 0 — Setup (45 min)
-- [ ] Boot the VirtualBox Ubuntu 22.04 VM (§4).
-- [ ] Install all apt packages inside the VM (§4b).
-- [ ] Create GitHub repo, clone inside the VM at `~/autoheal`.
+- [ ] Install WSL2 + Ubuntu via `wsl --install -d Ubuntu-22.04` (§4a).
+- [ ] Install all apt packages inside the Ubuntu shell (§4b).
+- [ ] Clone the repo into `~/autoheal` (§4c), not under `/mnt/c/...`.
 - [ ] Scaffold directory tree (already done — see §6 layout).
 - [ ] `make` runs and produces empty binaries linking cleanly.
 
@@ -185,7 +185,7 @@ Build in dependency order so each step is testable:
 
 ### Phase 4 — Rogue Programs (45 min)
 1. `rogues/rogue_cpu.cpp` — busy loop.
-2. `rogues/rogue_mem.cpp` — bounded leak (cap 1 GB so we don't OOM the VM).
+2. `rogues/rogue_mem.cpp` — bounded leak (cap 1 GB so we don't OOM the WSL VM).
 3. `rogues/rogue_fork.cpp` — fork bomb capped at 50 children.
 
 ### Phase 5 — Demo Dry-Run + Bug Hunt (2 hrs)
@@ -267,7 +267,7 @@ autoheal/
 |---|---|---|
 | Race between Observer read and process termination | **High** | `try { read } catch { skip pid this tick }` — already in plan. |
 | Healer signals the wrong PID | **Critical** | Hardcoded ignore list + re-check at signal time + `--dry-run` flag during dev. Never run as root until last hour. |
-| Demo rogue crashes the VM | Medium | Fork-bomb capped at 50; test one rogue at a time; **take a VirtualBox snapshot** before the demo so you can revert in one click. |
+| Demo rogue crashes the WSL VM | Medium | Fork-bomb capped at 50; test one rogue at a time. `wsl --shutdown` from PowerShell instantly recovers a stuck WSL instance. |
 | websocketpp + Boost install pain | Low | `apt install libwebsocketpp-dev libboost-all-dev` — both are first-class Ubuntu packages. |
 | Next.js setup eats hours | Medium | Static HTML fallback is rung 4 of the descope ladder. |
 | Thresholds too aggressive → false positives kill legit processes | Medium | All thresholds in `src/common/config.hpp`; tune in Phase 5 dry-run. **Always test as non-root first** so you can't signal anything you don't own. |
