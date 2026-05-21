@@ -26,7 +26,9 @@ public:
     void add(int pid);
 
 private:
-    std::unordered_set<int> hard_ignored_pids_;
+    std::unordered_set<int>         hard_ignored_pids_;
+    // Process names (comm) that should never be signalled.
+    static const std::unordered_set<std::string> hard_ignored_comms_;
 };
 
 }  // namespace autoheal

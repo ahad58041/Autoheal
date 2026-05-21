@@ -5,6 +5,15 @@
 
 namespace autoheal {
 
+// Process names that must never be killed — our own dashboard and Node.js tooling.
+const std::unordered_set<std::string> IgnoreList::hard_ignored_comms_ = {
+    "next-server",   // Next.js dashboard (our own UI)
+    "node",          // Node.js runtime
+    "npm",           // npm scripts
+    "sh",            // shell scripts spawned by npm
+    "bash",          // shells
+};
+
 IgnoreList::IgnoreList() {
     hard_ignored_pids_.insert(1);              // init / systemd
     hard_ignored_pids_.insert(2);              // kthreadd
@@ -19,6 +28,7 @@ void IgnoreList::add(int pid) {
 
 bool IgnoreList::should_protect(const ProcessSnapshot& p) const {
     if (hard_ignored_pids_.count(p.pid)) return true;
+    if (hard_ignored_comms_.count(p.comm)) return true;
 
     // Anything reparented to kthreadd (PID 2) is a kernel thread.
     if (p.ppid == 2) return true;
